@@ -1,56 +1,92 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from "react";
 
-export default function AdBanner({ format = 'horizontal', className = '' }) {
+export default function AdBanner({ format = "horizontal", className = "" }) {
+  const adRef = useRef(null);
+
   useEffect(() => {
-    // Load Google AdSense script if it hasn't been loaded yet
-    if (!window.adsbygoogle) {
-      const script = document.createElement('script');
-      script.src = 'https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js';
-      script.async = true;
-      script.crossOrigin = 'anonymous';
-      script.dataset.adClient = 'ca-pub-9019285095400516';
-      document.head.appendChild(script);
-    }
+    // Make sure the container has dimensions before loading ads
+    if (!adRef.current) return;
 
-    // Initialize ads when the script is loaded
-    try {
-      (window.adsbygoogle = window.adsbygoogle || []).push({});
-    } catch (error) {
-      console.error('AdSense error:', error);
-    }
-  }, []);
+    // Define a specific timeout to ensure the DOM is fully rendered
+    const timer = setTimeout(() => {
+      try {
+        // Make sure adsbygoogle is defined
+        if (window.adsbygoogle === undefined) {
+          window.adsbygoogle = [];
+        }
+        
+        // Push the ad
+        window.adsbygoogle.push({});
+      } catch (error) {
+        console.error("AdSense error:", error);
+      }
+    }, 1000); // Increased timeout to ensure component is fully rendered
 
-  // Get the ad slot based on format
-  const getAdSlot = () => {
-    switch (format) {
-      case 'horizontal':
-        return '2422219013';
-      case 'vertical':
-        return '1961718854';
-      default:
-        return '2422219013'; // Default to horizontal ad slot
-    }
-  };
+    return () => clearTimeout(timer);
+  }, [format]); // Re-run when format changes
 
   // Define ad sizes based on format
   const adSizes = {
-    horizontal: { width: '728px', height: '90px' },
-    vertical: { width: '160px', height: '600px' },
-    rectangle: { width: '300px', height: '250px' },
-    responsive: { width: '100%', height: 'auto', minHeight: '100px' }
+    horizontal: { width: 728, height: 90 },
+    vertical: { width: 160, height: 600 },
+    rectangle: { width: 300, height: 250 },
+    responsive: { width: "100%", height: "auto", minHeight: "100px" },
   };
 
-  const adSize = adSizes[format] || adSizes.responsive;
+  // Get specific dimensions for the current format
+  const adSize = adSizes[format] || adSizes.horizontal;
   
+  // Get the ad slot based on format
+  const getAdSlot = () => {
+    switch (format) {
+      case "horizontal":
+        return "2422219013";
+      case "vertical":
+        return "1961718854";
+      case "rectangle":
+        return "2422219013";
+      default:
+        return "2422219013";
+    }
+  };
+
+  // Calculate inline style based on format
+  const getAdStyle = () => {
+    if (format === "responsive") {
+      return {
+        display: "block",
+        width: "100%",
+        height: "auto",
+        minHeight: "100px"
+      };
+    }
+    
+    return {
+      display: "block",
+      width: `${adSize.width}px`,
+      height: `${adSize.height}px`
+    };
+  };
+
   return (
-    <div className={`ad-container ${className}`}>
+    <div 
+      className={`ad-container ${className}`}
+      style={{ 
+        overflow: "hidden",
+        width: format === "responsive" ? "100%" : `${adSize.width}px`,
+        minHeight: `${format === "responsive" ? "100px" : adSize.height}px`,
+        margin: "0 auto"
+      }}
+    >
       <ins
+        ref={adRef}
         className="adsbygoogle"
-        style={adSize}
+        style={getAdStyle()}
         data-ad-client="ca-pub-9019285095400516"
         data-ad-slot={getAdSlot()}
-        data-ad-format={format === 'responsive' ? 'auto' : format}
-        data-full-width-responsive={format === 'responsive' ? 'true' : 'false'}
+        data-adtest="on"
+        data-ad-format={format === "responsive" ? "auto" : ""}
+        data-full-width-responsive={format === "responsive" ? "true" : "false"}
       />
       <small>Advertisement</small>
     </div>
